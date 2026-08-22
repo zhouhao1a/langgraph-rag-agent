@@ -5,5 +5,6 @@ __pycache__/
 *.pyc
 main.py
 state.py
-data/knowledge_backup.txttest.py
+data/knowledge_backup.txt
+test.py
 testllm.py
