@@ -58,22 +58,19 @@ async def stream_answer(query: str, graph, config):
     print()
 
 
-async def main():
+async def run_agent(user_query: str, thread_id: str):
     # AsyncSqliteSaver 是异步版持久化 checkpointer，自动把每个 thread 的对话落盘到 checkpoints.db
     async with AsyncSqliteSaver.from_conn_string("checkpoints.db") as checkpointer:
         graph = builder.compile(checkpointer=checkpointer)
-        config = {"configurable": {"thread_id": "user_001"}}  # 同一个 thread_id = 同一段记忆
-        # 第一轮：正常提问
-        print("=== 第一轮 ===")
-        await stream_answer("查一下深圳现在的天气", graph, config)
+        config = {"configurable": {"thread_id": thread_id }}  # 同一个 thread_id = 同一段记忆
+        input_data = {"messages": [("user", user_query)]}
+        # astream 返回迭代器，用来做流式输出
+        # stream_mode="messages" 每次 yield 的是 (消息块, 元数据) 元组
+        # 解包出消息块，只转发 AI 文本，过滤用户提问(HumanMessage)和工具结果(ToolMessage)
+        async for message_chunk, _ in graph.astream(input_data, config, stream_mode="messages"):
+            if message_chunk.content and not isinstance(message_chunk, (HumanMessage, ToolMessage)):
+                yield message_chunk
 
-        # 第二轮：问"刚才聊了什么"，验证记忆真的持久化了（同一 thread_id 才能读到历史）
-        print("\n\n=== 第二轮（验证记忆持久化）===")
-        await stream_answer("我刚才让你查了什么？", graph, config)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
 
 
 

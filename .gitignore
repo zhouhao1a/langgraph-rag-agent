@@ -3,8 +3,6 @@ chroma_db/
 checkpoints.db
 __pycache__/
 *.pyc
-main.py
+.pytest_cache/
 state.py
-data/knowledge_backup.txt
-test.py
-testllm.py
+README_*_backup.md
