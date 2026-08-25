@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from langchain_core.tools import tool
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
+from simpleeval import simple_eval
 
 hugging = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
 
@@ -11,8 +12,11 @@ def calculator(expression:str)->str:
     """
     对数学表达式进行计算，比如 500*3、1200/4
     """
-    result = eval(expression)
-    return str(result)
+    try:
+        result = simple_eval(expression)
+        return str(result)
+    except Exception as e:
+        return f"计算失败：{str(e)}"
 
 
 @tool
