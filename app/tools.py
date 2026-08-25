@@ -1,4 +1,5 @@
 import requests
+import os
 from bs4 import BeautifulSoup
 from langchain_core.tools import tool
 from langchain_chroma import Chroma
@@ -37,7 +38,8 @@ def search_kb(query: str) -> str:
         )
         # for doc, score in result:  # ← 从这行到下面两行是观测点
         #     print(f"[search_kb] L2={score:.3f} | {doc.page_content[:30]}")
-        filtered = [doc for doc, score in result if score < 0.9]  # ③ 过滤
+        threshold = float(os.getenv("SEARCH_KB_THRESHOLD", "0.9"))
+        filtered = [doc for doc, score in result if score < threshold]  # ③ 过滤
         if not filtered:
             return "知识库中没有找到相关内容"
         return "\n".join(doc.page_content for doc in filtered)

@@ -5,6 +5,10 @@ from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.agent import run_agent, builder
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+
 
 
 
@@ -23,6 +27,20 @@ app = FastAPI(title="Agent后端请求",lifespan=lifespan)
 class ChatRequest(BaseModel):
     query: str
     thread_id: str
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content=fail(f"服务器内部错误：{exc}")
+    )
+
+
+def ok(data=None,message="success",code=0):
+    return {"code":code,"message":message,"data":data}
+
+def fail(message="message",code=1):
+    return {"code":code,"message":message,"data":None}
 
 @app.post("/chat/stream")
 async def chat(req: ChatRequest):
@@ -48,17 +66,16 @@ async def chat(req: ChatRequest):
 # ===== 新增：非流式合并输出接口 =====
 
 
+
 @app.post("/chat/once")
 async def chat_once(req: ChatRequest):
-    """
-       一次性返回完整回答（非流式）。
-       用 ainvoke 等 LLM 全部生成完，直接返回 {"answer": "完整文本"}，
-       方便调试 / 第三方集成，Postman 里看到的就是一整段，没有分块。
-       """
-    full_answer = ""
-    async for chunk in run_agent(req.query, req.thread_id,graph=app.state.graph):
-        full_answer += chunk.content
-    return {"answer": full_answer}
+        full_answer = ""
+        async for chunk in run_agent(req.query, req.thread_id,graph=app.state.graph):
+                full_answer += chunk.content
+        # raise Exception("测试异常")
+        return ok({"answer": full_answer})
+
+
 
 
 # 防止被浏览器“跨域”拦掉
