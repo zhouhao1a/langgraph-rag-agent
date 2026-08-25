@@ -1,0 +1,43 @@
+<w:tblPr><w:tblStyle w:val="32"/><w:tblW w:w="0" w:type="auto"/><w:jc w:val="center"/><w:tblBorders><w:top w:val="none" w:color="auto" w:sz="0" w:space="0"/><w:left w:val="none" w:color="auto" w:sz="0" w:space="0"/><w:bottom w:val="none" w:color="auto" w:sz="0" w:space="0"/><w:right w:val="none" w:color="auto" w:sz="0" w:space="0"/><w:insideH w:val="none" w:color="auto" w:sz="0" w:space="0"/><w:insideV w:val="none" w:color="auto" w:sz="0" w:space="0"/></w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="8130"/><w:gridCol w:w="1705"/></w:tblGrid><w:tr w14:paraId="5ADB9195"><w:tblPrEx><w:tblBorders><w:top w:val="none" w:color="auto" w:sz="0" w:space="0"/><w:left w:val="none" w:color="auto" w:sz="0" w:space="0"/><w:bottom w:val="none" w:color="auto" w:sz="0" w:space="0"/><w:right w:val="none" w:color="auto" w:sz="0" w:space="0"/><w:insideH w:val="none" w:color="auto" w:sz="0" w:space="0"/><w:insideV w:val="none" w:color="auto" w:sz="0" w:space="0"/></w:tblBorders><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPrEx><w:trPr><w:trHeight w:val="2029" w:hRule="atLeast"/><w:jc w:val="center"/></w:trPr><w:tc><w:tcPr><w:tcW w:w="8130" w:type="dxa"/></w:tcPr><w:p w14:paraId="525D1092"><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="微软雅黑" w:hAnsi="微软雅黑" w:eastAsia="微软雅黑"/><w:b/><w:color w:val="1F3A5F"/><w:sz w:val="40"/></w:rPr><w:t>周豪
+求职意向：Agent 开发工程师 / AI 应用开发工程师
+电话：15971857616　　邮箱：304717112@qq.com
+
+
+个人优势
+具备业务痛点洞察与工程落地能力，能基于 LLM + Agent + RAG 快速搭建测试提效助手，独立完成从原型到服务化部署全链路。
+熟练使用 Cursor、Claude Code 等 AI 编程工具，具备 Vibe Coding 实践经验；对大模型、Agent、RAG 技术迭代高度敏感，可快速吸收并落地。
+具备跨角色协作能力，能将技术逻辑转化为业务语言，推动问题从复现、定位到修复验证的全流程闭环。
+教育背景
+[东莞城市学院] | [计算机科学与技术] | [ 本科] | [2024.09 – 2026.06]
+工作经历
+广州掌动智能科技有限公司 | 兼容测试工程师（2026.07 转正） | 2025.11 – 至今
+负责网上国网、柳州银行、国泰基金、友邦 APP 等多端兼容性测试，覆盖 iOS / 鸿蒙 / 安卓三端，累计执行用例 2000+ 条。
+编写缺陷报告并跟踪 bug 全生命周期，联动研发完成复现、修复与回归验证，推动用例闭环；独立撰写回归测试报告与线下用例文档。
+使用 tidevice 完成 iOS 端 IPA 安装与日志抓取，鸿蒙端 HAP 包安装及 UDID 签名配置，搭建安卓自动化测试环境。
+运用 Linux 命令筛选应用日志，辅助定位 304/406/500 等报错；使用 MySQL 编写 SQL 校验数据一致性，借助 python 编写小工具提升测试效率。
+项目经历
+基于 LangGraph 的测试团队 AI 辅助 Agent | 个人开源项目
+项目地址：https://github.com/zhouhao1a/langgraph-rag-agent
+项目介绍：面向测试业务场景，搭建具备 RAG 知识库、多工具调用、持久化记忆的 ReAct Agent，完成智能体逻辑、工具封装、向量库、后端服务、演示前端全链路开发。
+技术栈：Python、LangGraph、LangChain、DeepSeek、Chroma、HuggingFace Embedding、FastAPI、uvicorn、SQLite、LangSmith、HTML/JS
+基于 LangGraph 搭建 ReAct 循环智能体，使用 StateGraph + ToolNode + tools_condition 实现 LLM 决策、工具调用、结果回传，配置条件路由与异常兜底防止死循环。
+通过 @tool 封装 RAG 检索、网页爬取、实时天气、计算器四类工具，均带 try-except 异常降级；搭建 Chroma 向量库，导入 8 份测试业务文档，设置 L2 阈值过滤缓解幻觉。
+支持并行工具调用与流式输出，基于 astream 处理分片数据并重组参数；集成 AsyncSqliteSaver 实现对话记忆持久化，服务重启后保留多轮上下文。
+基于 FastAPI + uvicorn 开发后端，提供 SSE 流式 /chat 与非流式 /chat/once 接口；接入 LangSmith 链路追踪；开发 HTML/JS 演示前端实现打字机效果；项目完整开源含中文 README 与架构图。
+项目成果：四类工具调用成功率 95%+，Agent 运行无死循环；RAG 业务问答准确率约 85%；支持 50+ 轮多轮对话且重启后上下文完整恢复。
+基于 Dify 的文档 RAG 问答系统 | 个人练习项目
+项目介绍：基于 Dify 可视化编排搭建轻量化文档问答应用，利用知识库 + Chatflow 工作流实现 PDF 清洗、语义切分、向量检索全流程，验证各环节对 RAG 问答效果的影响。
+技术栈：Dify、Python、Chroma、HuggingFace Embedding、DeepSeek、RAG
+在 Dify 平台创建知识库，上传 PDF/TXT 文档，配置自动清洗（去页眉页脚、合并断行、过滤符号）与分段策略。
+采用语义分段（段落边界分块、重叠拼接）替代固定字符切割，提升检索召回与段落语义完整性。
+通过 Chatflow 编排召回、重排序与 LLM 生成节点，接入 DeepSeek 模型实现私有文档问答；配置检索阈值与相似度过滤缓解幻觉。
+利用 Dify 内置 API / Web 应用一键发布，对比不同切分与检索参数对召回率的影响，沉淀可复用配置模板。
+项目成果：语义分段使段落语义完整性达 90%+，检索召回率提升约 15%；形成可复用 Dify RAG 配置链路。
+专业技能
+一、AI 智能体与大模型应用
+熟练使用 LangGraph、LangChain 开发 Agent，熟悉 ReAct 智能体、Tool Calling、多轮对话记忆；熟悉 RAG 全链路（文档清洗、语义切分、向量化、检索、阈值过滤），具备 Chroma 实战经验。
+熟悉 Dify 平台低代码搭建 RAG 应用与 Chatflow 工作流编排，能快速配置知识库、召回与生成节点并发布 API / Web 应用。
+熟悉 DeepSeek 大模型 OpenAI 兼容接口接入，了解 Prompt 工程与幻觉抑制；具备 Agent 服务化能力（FastAPI、SSE 流式、LangSmith 可观测）。
+二、数据库与工程开发
+Python：熟练掌握 asyncio 异步编程，熟悉 FastAPI、requests、BeautifulSoup 等库；Java：具备基础能力，能编写测试工具脚本。
+MySQL：熟悉 SQL 查询与数据校验；熟悉 Linux 基础命令与日志排查；熟练使用 Git/GitHub 版本控制与项目开源管理。

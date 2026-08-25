@@ -1,8 +1,9 @@
-.env
-chroma_db/
-checkpoints.db
+# 测试截图、本地文档
+docs/test_record/
+# 缓存文件
 __pycache__/
 *.pyc
-.pytest_cache/
-state.py
-README_*_backup.md
+# 数据库
+*.db
+# 环境变量
+.env

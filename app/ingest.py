@@ -7,7 +7,7 @@ from langchain_chroma import Chroma
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-loader = TextLoader("data/knowledge.txt", encoding="utf-8")
+loader = TextLoader("../data/knowledge.txt", encoding="utf-8")
 documents = loader.load()
 
 splitter = RecursiveCharacterTextSplitter(

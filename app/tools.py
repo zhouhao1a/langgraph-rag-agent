@@ -42,18 +42,6 @@ def search_kb(query: str) -> str:
             return "知识库中没有找到相关内容"
         return "\n".join(doc.page_content for doc in filtered)
 
-# @tool
-# def get_weather(city: str) -> str:
-#     """查询指定城市的实时天气信息，用户问天气、温度、下雨等问题时使用"""
-#     mock_data = {
-#         "北京": "晴，气温32°C，湿度45%，微风",
-#         "上海": "多云，气温29°C，湿度70%，东南风3级",
-#         "广州": "雷阵雨，气温31°C，湿度85%，南风2级",
-#         "深圳": "阴，气温30°C，湿度80%，无持续风向",
-#     }
-#     return mock_data.get(city, f"{city}：暂无天气数据，建议稍后再试")
-
-
 # 查天气真数据
 @tool
 def get_weather(city: str) -> str:
@@ -66,12 +54,6 @@ def get_weather(city: str) -> str:
     cur = r.json()["current_condition"][0]
     desc = cur["lang_zh"][0]["value"] if "lang_zh" in cur else cur["weatherDesc"][0]["value"]
     return f"{city}当前：{desc}，气温{cur['temp_C']}°C，体感{cur['FeelsLikeC']}°C，湿度{cur['humidity']}%"
-
-#
-# @tool
-# def scrape_web(url: str) -> str:
-#     """爬取指定网页的内容，用户需要获取某个网页信息时使用"""
-#     return f"已抓取 {url} 的内容：这是一个模拟网页，实际项目中会用 requests 库请求网页并用 BeautifulSoup 解析HTML。"
 
 # 爬取网页内容真数据
 @tool

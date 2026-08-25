@@ -8,7 +8,7 @@ load_dotenv(override=True)
 from rich import print as rprint
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState, StateGraph, START, END
-from tools import calculator, search_kb, scrape_web, get_weather
+from .tools import calculator, search_kb, scrape_web, get_weather
 from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_core.messages import HumanMessage, SystemMessage,ToolMessage
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver

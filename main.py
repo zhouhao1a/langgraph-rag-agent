@@ -5,7 +5,7 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 
-from agent import run_agent, builder
+from app.agent import run_agent, builder
 
 app = FastAPI(title="Agent后端请求")
 
@@ -75,7 +75,7 @@ import os
 # 负责前端启动不是在直接打开html，可以直接访问127.0.0.1:8000
 @app.get("/")
 async def index():
-    return FileResponse(os.path.join(os.path.dirname(__file__), "index.html"))
+    return FileResponse(os.path.join(os.path.dirname(__file__), "static/index.html"))
 
 
 # 4. 运行服务的入口（unicorn.run，启动服务）
