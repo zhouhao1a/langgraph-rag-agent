@@ -1,6 +1,9 @@
 import os
 import asyncio
 
+from fastapi import FastAPI
+from torch.ao.quantization.backend_config.onednn import with_bn
+
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -58,8 +61,8 @@ async def stream_answer(query: str, graph, config):
     print()
 
 
-async def run_agent(user_query: str, thread_id: str):
-    # AsyncSqliteSaver 是异步版持久化 checkpointer，自动把每个 thread 的对话落盘到 checkpoints.db
+async def run_agent(user_query: str, thread_id: str,graph=None):
+    # AsyncSqliteSaver 是异步版持久化 checkpointer，自动把每个 thread 的对话落盘到 checkpoints.db，通俗就是打开数据库
     async with AsyncSqliteSaver.from_conn_string("checkpoints.db") as checkpointer:
         graph = builder.compile(checkpointer=checkpointer)
         config = {"configurable": {"thread_id": thread_id }}  # 同一个 thread_id = 同一段记忆
@@ -70,6 +73,8 @@ async def run_agent(user_query: str, thread_id: str):
         async for message_chunk, _ in graph.astream(input_data, config, stream_mode="messages"):
             if message_chunk.content and not isinstance(message_chunk, (HumanMessage, ToolMessage)):
                 yield message_chunk
+
+
 
 
 

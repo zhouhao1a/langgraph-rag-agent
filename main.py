@@ -1,15 +1,24 @@
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
-from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
-
+from contextlib import asynccontextmanager
 from app.agent import run_agent, builder
 
-app = FastAPI(title="Agent后端请求")
 
 
+# 定义fastapi生命周期，防止一直反复编译浪费资源
+@asynccontextmanager
+async def lifespan(app:FastAPI):
+    async with AsyncSqliteSaver.from_conn_string("checkpoints.db") as checkpointer:
+        app.state.graph = builder.compile(checkpointer=checkpointer)
+        print("已编译图")
+        yield
+
+
+
+app = FastAPI(title="Agent后端请求",lifespan=lifespan)
 #定义前端传过来的参数是什么类型，前端穿两个值，一个提问，一个记忆id
 class ChatRequest(BaseModel):
     query: str
@@ -29,7 +38,7 @@ async def chat(req: ChatRequest):
 
 # 定义一个函数（生成器），循环拿agent吐出的一小块一小块chunk数据
     async def stream_generator():
-       async for chunk in run_agent(req.query,req.thread_id):
+       async for chunk in run_agent(req.query,req.thread_id,graph=app.state.graph):
 # 把拿到的小块数据包装成SSE规定格式往前端发
             yield f"data: {chunk.content}\n\n"
 # SSE流式响应，实现打字输出效果
@@ -37,27 +46,19 @@ async def chat(req: ChatRequest):
 
 
 # ===== 新增：非流式合并输出接口 =====
+
+
 @app.post("/chat/once")
 async def chat_once(req: ChatRequest):
     """
-    一次性返回完整回答（非流式）。
-    用 ainvoke 等 LLM 全部生成完，直接返回 {"answer": "完整文本"}，
-    方便调试 / 第三方集成，Postman 里看到的就是一整段，没有分块。
-    """
-    async with AsyncSqliteSaver.from_conn_string("checkpoints.db") as checkpointer:
-        graph = builder.compile(checkpointer=checkpointer)
-        config = {"configurable": {"thread_id": req.thread_id}}
-        # ainvoke = 非流式：等全部跑完一次性拿到完整 state
-        result = await graph.ainvoke(
-            {"messages": [HumanMessage(content=req.query)]},
-            config=config,
-        )
-        # 取最后一条 AI 消息内容（过滤掉 Human/Tool，只拿最终自然语言回答）
-        ai_messages = [m for m in result["messages"] if isinstance(m, AIMessage)]
-        answer = ai_messages[-1].content if ai_messages else ""
-        return {"answer": answer}
-
-
+       一次性返回完整回答（非流式）。
+       用 ainvoke 等 LLM 全部生成完，直接返回 {"answer": "完整文本"}，
+       方便调试 / 第三方集成，Postman 里看到的就是一整段，没有分块。
+       """
+    full_answer = ""
+    async for chunk in run_agent(req.query, req.thread_id,graph=app.state.graph):
+        full_answer += chunk.content
+    return {"answer": full_answer}
 
 
 # 防止被浏览器“跨域”拦掉
