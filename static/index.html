@@ -322,7 +322,7 @@ async function send(){
       if (!resp.ok) throw new Error("HTTP " + resp.status);
       const data = await resp.json();
       typingBubble.className = "bubble";
-      typingBubble.textContent = data.answer;
+     typingBubble.textContent = data.data?.answer ?? data.message;
       refreshMsgCount();
     }
     toolActiveEl.textContent = "✅ 已完成 · 第 " + sentCount + " 次对话";

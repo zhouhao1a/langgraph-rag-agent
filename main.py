@@ -4,12 +4,15 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from sqlalchemy import select
+
+
 from app.agent import run_agent, builder
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-
-
+from app.db import init_db
+from app.db import SessionLocal, ChatHistory
 
 
 # 定义fastapi生命周期，防止一直反复编译浪费资源
@@ -18,6 +21,7 @@ async def lifespan(app:FastAPI):
     async with AsyncSqliteSaver.from_conn_string("checkpoints.db") as checkpointer:
         app.state.graph = builder.compile(checkpointer=checkpointer)
         print("已编译图")
+        await init_db()
         yield
 
 
@@ -72,10 +76,22 @@ async def chat_once(req: ChatRequest):
         full_answer = ""
         async for chunk in run_agent(req.query, req.thread_id,graph=app.state.graph):
                 full_answer += chunk.content
+        async with SessionLocal() as session:
+            session.add(ChatHistory(thread_id=req.thread_id,role="user",content=req.query))
+            session.add(ChatHistory(thread_id=req.thread_id, role="assistant", content=full_answer))
+            await session.commit()         #给表加参数要按顺序不能并行
         # raise Exception("测试异常")
         return ok({"answer": full_answer})
 
-
+@app.get("/chat/history")
+async def chat_history(thread_id: str):
+      async with SessionLocal() as session:
+          result = await session.execute(
+                select(ChatHistory).where(ChatHistory.thread_id ==
+  thread_id).order_by(ChatHistory.id)
+          )
+          rows = result.scalars().all()
+      return ok({"messages": [{"role": r.role, "content": r.content} for r in rows]})
 
 
 # 防止被浏览器“跨域”拦掉
