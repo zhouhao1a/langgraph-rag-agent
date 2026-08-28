@@ -16,6 +16,14 @@ class ChatHistory(Base):
     content = Column(Text)
     created_at = Column(DateTime, default=datetime.now)
 
+
+class User(Base):
+    __tablename__ = "user"
+    id = Column(Integer,primary_key=True,autoincrement=True)
+    username = Column(String(50),unique=True,index=True) #unique唯一约束不能重复
+    password_hash = Column(String(128))
+    created_at = Column(DateTime, default=datetime.now)
+
 # 创建异步引擎：相当于打开一条通往MySQL的通道
 engine = create_async_engine(DB_URL, echo=True)
 

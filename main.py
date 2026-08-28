@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.params import Depends
 from fastapi.responses import StreamingResponse
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from pydantic import BaseModel
@@ -11,8 +12,10 @@ from app.agent import run_agent, builder
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from app.db import init_db
+from app.db import init_db, User
 from app.db import SessionLocal, ChatHistory
+from app.auth import hash_password, verify_password, create_token
+from app.auth import get_current_user
 
 
 # 定义fastapi生命周期，防止一直反复编译浪费资源
@@ -72,7 +75,7 @@ async def chat(req: ChatRequest):
 
 
 @app.post("/chat/once")
-async def chat_once(req: ChatRequest):
+async def chat_once(req: ChatRequest,user:User=Depends(get_current_user)):
         full_answer = ""
         async for chunk in run_agent(req.query, req.thread_id,graph=app.state.graph):
                 full_answer += chunk.content
@@ -92,6 +95,34 @@ async def chat_history(thread_id: str):
           )
           rows = result.scalars().all()
       return ok({"messages": [{"role": r.role, "content": r.content} for r in rows]})
+
+
+
+
+class RegisterRequest(BaseModel):
+  username: str
+  password: str
+
+@app.post("/auth/register")
+async def register(req: RegisterRequest):
+  async with SessionLocal() as session:
+      exists = (await session.execute(select(User).where(User.username ==
+req.username))).scalar_one_or_none()
+      if exists:
+          return fail("用户名已存在")
+      session.add(User(username=req.username,
+password_hash=hash_password(req.password)))
+      await session.commit()
+  return ok({"username": req.username})
+
+@app.post("/auth/login")
+async def login(req: RegisterRequest):
+  async with SessionLocal() as session:
+      user = (await session.execute(select(User).where(User.username ==
+req.username))).scalar_one_or_none()
+      if not user or not verify_password(req.password, user.password_hash):
+          return fail("用户名或密码错误")
+  return ok({"token": create_token(user.id)})
 
 
 # 防止被浏览器“跨域”拦掉
