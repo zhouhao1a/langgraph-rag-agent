@@ -14,3 +14,12 @@ huggingface-hub
 python-dotenv
 rich
 httpx
+bcrypt
+PyJWT
+SQLAlchemy
+asyncmy
+simpleeval
+beautifulsoup4
+requests
+pytest
+pytest-asyncio
