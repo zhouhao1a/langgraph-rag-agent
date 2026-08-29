@@ -6,7 +6,13 @@ from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from simpleeval import simple_eval
 
-hugging = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
+from functools import lru_cache
+
+
+@lru_cache(maxsize=1)
+def _get_embedder():
+#     改成懒加载（用到才加载）
+    return HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
 
 @tool
 def calculator(expression:str)->str:
@@ -29,7 +35,7 @@ def search_kb(query: str) -> str:
         # 第 1 小步：加载已有的向量库
         vectorstore = Chroma(
             persist_directory="./chroma_db",  # 从哪个文件夹加载
-            embedding_function=hugging  # 告诉它查询时用哪个模型把用户的问题转向量
+            embedding_function=_get_embedder()    # 告诉它查询时用哪个模型把用户的问题转向量
         )
         # 检索，将用户的问题和转化成向量，在与库的文件比对向量比
         result = vectorstore.similarity_search_with_score(

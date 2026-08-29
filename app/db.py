@@ -1,9 +1,13 @@
+from dotenv import load_dotenv
 from sqlalchemy import Column, Integer, String, Text, DateTime
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from datetime import datetime
 import os
+load_dotenv()
 DB_URL = os.getenv("DB_URL")
+
+
 
 
 class Base(DeclarativeBase):
