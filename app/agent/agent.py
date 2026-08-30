@@ -1,13 +1,6 @@
-import os
 import asyncio
-
 from fastapi import FastAPI
-from torch.ao.quantization.backend_config.onednn import with_bn
-
-os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-from dotenv import load_dotenv
-load_dotenv(override=True)
-
+from ..core.config import DEEPSEEK_API_KEY, DEEPSEEK_API_BASE,HF_ENDPOINT
 from rich import print as rprint
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState, StateGraph, START, END
@@ -21,8 +14,8 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 # DeepSeek API 是 OpenAI 兼容的，用 ChatOpenAI 直接接，bind_tools 才能正常工作
 llm = ChatOpenAI(
     model="deepseek-chat",
-    api_key=os.getenv("DEEPSEEK_API_KEY"),
-    base_url=os.getenv("DEEPSEEK_API_BASE")
+    api_key=DEEPSEEK_API_KEY,
+    base_url=DEEPSEEK_API_BASE
 )
 
 llm_with_tools = llm.bind_tools([calculator, search_kb, scrape_web, get_weather])

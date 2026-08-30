@@ -1,5 +1,4 @@
-import os
-os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+from app.core.config import HF_ENDPOINT
 
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma

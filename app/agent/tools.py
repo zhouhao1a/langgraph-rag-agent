@@ -1,12 +1,11 @@
 import requests
-import os
 from bs4 import BeautifulSoup
 from langchain_core.tools import tool
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from simpleeval import simple_eval
-
 from functools import lru_cache
+from app.core.config import SEARCH_KB_THRESHOLD
 
 
 @lru_cache(maxsize=1)
@@ -44,7 +43,7 @@ def search_kb(query: str) -> str:
         )
         # for doc, score in result:  # ← 从这行到下面两行是观测点
         #     print(f"[search_kb] L2={score:.3f} | {doc.page_content[:30]}")
-        threshold = float(os.getenv("SEARCH_KB_THRESHOLD", "0.9"))
+        threshold = float(SEARCH_KB_THRESHOLD)
         filtered = [doc for doc, score in result if score < threshold]  # ③ 过滤
         if not filtered:
             return "知识库中没有找到相关内容"

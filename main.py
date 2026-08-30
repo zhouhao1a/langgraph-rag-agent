@@ -1,21 +1,13 @@
 from fastapi import FastAPI
-from fastapi.params import Depends
-from fastapi.responses import StreamingResponse
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from sqlalchemy import select
-
-
-from app.agent import run_agent, builder
+from app.agent.agent import builder
 from fastapi import Request
 from fastapi.responses import JSONResponse
-
-from app.db import init_db, User
-from app.db import SessionLocal, ChatHistory
-from app.auth import hash_password, verify_password, create_token
-from app.auth import get_current_user
+from app.models.base import init_db
+from app.schemas.common import fail
+from app.routers import chat, auth, projects, cases
 
 
 # 定义fastapi生命周期，防止一直反复编译浪费资源
@@ -31,9 +23,14 @@ async def lifespan(app:FastAPI):
 
 app = FastAPI(title="Agent后端请求",lifespan=lifespan)
 #定义前端传过来的参数是什么类型，前端穿两个值，一个提问，一个记忆id
-class ChatRequest(BaseModel):
-    query: str
-    thread_id: str
+
+app.include_router(chat.router)
+app.include_router(auth.router)
+app.include_router(projects.router)
+app.include_router(cases.router)
+
+
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -43,86 +40,6 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-def ok(data=None,message="success",code=0):
-    return {"code":code,"message":message,"data":data}
-
-def fail(message="message",code=1):
-    return {"code":code,"message":message,"data":None}
-
-@app.post("/chat/stream")
-async def chat(req: ChatRequest):
-    """
-        接收前端POST ，前端会传一个json格式的post
-        json:
-        {
-          "query":"帮我查测试规范",
-          "thread_id":"session_001"
-        }
-        返回SSE流式数据，对应agent.astream分片
-        """
-
-# 定义一个函数（生成器），循环拿agent吐出的一小块一小块chunk数据
-    async def stream_generator():
-       async for chunk in run_agent(req.query,req.thread_id,graph=app.state.graph):
-# 把拿到的小块数据包装成SSE规定格式往前端发
-            yield f"data: {chunk.content}\n\n"
-# SSE流式响应，实现打字输出效果
-    return StreamingResponse(stream_generator(), media_type="text/event-stream")
-
-
-# ===== 新增：非流式合并输出接口 =====
-
-
-
-@app.post("/chat/once")
-async def chat_once(req: ChatRequest,user:User=Depends(get_current_user)):
-        full_answer = ""
-        async for chunk in run_agent(req.query, req.thread_id,graph=app.state.graph):
-                full_answer += chunk.content
-        async with SessionLocal() as session:
-            session.add(ChatHistory(thread_id=req.thread_id,role="user",content=req.query))
-            session.add(ChatHistory(thread_id=req.thread_id, role="assistant", content=full_answer))
-            await session.commit()         #给表加参数要按顺序不能并行
-        # raise Exception("测试异常")
-        return ok({"answer": full_answer})
-
-@app.get("/chat/history")
-async def chat_history(thread_id: str):
-      async with SessionLocal() as session:
-          result = await session.execute(
-                select(ChatHistory).where(ChatHistory.thread_id ==
-  thread_id).order_by(ChatHistory.id)
-          )
-          rows = result.scalars().all()
-      return ok({"messages": [{"role": r.role, "content": r.content} for r in rows]})
-
-
-
-
-class RegisterRequest(BaseModel):
-  username: str
-  password: str
-
-@app.post("/auth/register")
-async def register(req: RegisterRequest):
-  async with SessionLocal() as session:
-      exists = (await session.execute(select(User).where(User.username ==
-req.username))).scalar_one_or_none()
-      if exists:
-          return fail("用户名已存在")
-      session.add(User(username=req.username,
-password_hash=hash_password(req.password)))
-      await session.commit()
-  return ok({"username": req.username})
-
-@app.post("/auth/login")
-async def login(req: RegisterRequest):
-  async with SessionLocal() as session:
-      user = (await session.execute(select(User).where(User.username ==
-req.username))).scalar_one_or_none()
-      if not user or not verify_password(req.password, user.password_hash):
-          return fail("用户名或密码错误")
-  return ok({"token": create_token(user.id)})
 
 
 # 防止被浏览器“跨域”拦掉

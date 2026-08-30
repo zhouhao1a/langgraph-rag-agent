@@ -2,11 +2,11 @@ import sys
 from pathlib import Path
 
 # 往上回退两层，回到项目根目录
-root_path = Path(__file__).parent.parent.parent
+root_path = Path(__file__).parent.parent
 sys.path.append(str(root_path))
 # 单元测试，白盒测试
 import pytest
-from app.agent import run_agent
+from app.agent.agent import run_agent
 
 
 

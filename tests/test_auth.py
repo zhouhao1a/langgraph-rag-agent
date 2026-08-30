@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-root_path = Path(__file__).parent.parent.parent
+root_path = Path(__file__).parent.parent
 sys.path.append(str(root_path))
 
 from datetime import datetime, timedelta, timezone
@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 import pytest
 
-from app.auth import (
+from app.core.security import (
     hash_password, verify_password,
     create_token, verify_token,
     SECRET_KEY, ALGORITHM,

@@ -1,364 +1,549 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LangGraph Agent 聊天</title>
-<style>
-  :root{
-    --bg:#eef1f6; --panel:#ffffff; --text:#1f2937; --muted:#8a94a6;
-    --accent:#4f46e5; --accent2:#2563eb; --bot-bg:#ffffff; --bot-border:#e6eaf2;
-    --shadow:0 6px 20px rgba(31,41,55,.08);
-  }
-  *{box-sizing:border-box;}
-  html,body{height:100%;}
-  body{
-    margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
-    background:linear-gradient(160deg,#e9edf5 0%, #f6f8fc 100%); color:var(--text);
-  }
-  .layout{
-    max-width:1200px; margin:0 auto; height:100vh; display:grid;
-    grid-template-columns:240px 1fr 240px; gap:14px; padding:14px;
-  }
-  .side{
-    background:var(--panel); border-radius:14px; box-shadow:var(--shadow);
-    padding:14px; display:flex; flex-direction:column; gap:10px;
-    overflow-y:auto;
-  }
-  .side h3{
-    font-size:12px; margin:4px 6px 0; color:var(--muted);
-    letter-spacing:1px; text-transform:uppercase;
-  }
-  .side p.tip{font-size:11.5px; color:var(--muted); margin:0 6px 6px; line-height:1.5;}
-  .quick{
-    text-align:left; border:1px solid var(--bot-border); background:#fbfcfe;
-    padding:9px 11px; border-radius:10px; cursor:pointer;
-    transition:all .15s; font-size:13px; color:var(--text);
-    display:flex; gap:9px; align-items:flex-start;
-  }
-  .quick:hover{border-color:var(--accent); background:#f4f6ff; transform:translateX(2px);}
-  .quick .icon{
-    flex:0 0 22px; width:22px; height:22px; border-radius:6px;
-    background:linear-gradient(135deg,#4f46e5,#2563eb); color:#fff;
-    display:flex; align-items:center; justify-content:center; font-size:12px;
-  }
-  .stat{
-    display:flex; justify-content:space-between; padding:7px 10px;
-    background:#f7f9fd; border-radius:8px; font-size:12px;
-  }
-  .stat span:first-child{color:var(--muted);}
-  .stat span:last-child{color:var(--text); font-weight:500;}
-  .status-dot{
-    display:inline-block; width:8px; height:8px; border-radius:50%;
-    background:#10b981; box-shadow:0 0 6px rgba(16,185,129,.6); margin-right:5px;
-    vertical-align:middle;
-  }
-  .status-dot.off{background:#94a3b8; box-shadow:none;}
-  .tool-active{
-    background:linear-gradient(135deg,#ede9fe,#dbeafe);
-    color:var(--accent); padding:7px 10px; border-radius:8px;
-    font-size:12.5px; text-align:center; font-weight:500;
-    animation:pulse 1.4s infinite;
-  }
-  @keyframes pulse{0%,100%{opacity:.85;}50%{opacity:1;}}
-  .btn-mini{
-    border:none; padding:7px 10px; border-radius:8px; cursor:pointer;
-    background:#f1f3f8; color:var(--text); font-size:12px; transition:background .15s;
-  }
-  .btn-mini:hover{background:#e3e7f0;}
-  .chat{
-    display:flex; flex-direction:column; background:var(--panel);
-    border-radius:14px; box-shadow:var(--shadow); overflow:hidden;
-  }
-  header{
-    padding:16px 20px; background:linear-gradient(135deg,#4f46e5,#2563eb);
-    color:#fff; box-shadow:0 2px 12px rgba(37,99,235,.25);
-  }
-  header h1{font-size:17px; margin:0; letter-spacing:.5px;}
-  header .sub{font-size:12px; opacity:.85; margin-top:5px;}
-  .top{
-    display:flex; gap:12px; align-items:center; padding:9px 20px;
-    background:#f7f9fd; font-size:12px; color:var(--muted);
-    border-bottom:1px solid var(--bot-border);
-  }
-  .top input[type=text]{
-    width:170px; padding:5px 10px; border:1px solid var(--bot-border);
-    border-radius:8px; color:var(--text); background:#fff; outline:none;
-  }
-  .top input[type=text]:focus{border-color:var(--accent);}
-  .top label{display:flex; gap:5px; align-items:center; cursor:pointer;}
-  #msgs{
-    flex:1; overflow-y:auto; padding:18px 20px; display:flex; flex-direction:column; gap:14px;
-  }
-  #msgs::-webkit-scrollbar{width:8px;}
-  #msgs::-webkit-scrollbar-thumb{background:#cfd6e4; border-radius:8px;}
-  .msg{display:flex; gap:10px; align-items:flex-start; animation:fade .25s ease;}
-  .avatar{
-    width:34px; height:34px; flex:0 0 34px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center; font-size:17px; color:#fff;
-  }
-  .avatar.u{background:linear-gradient(135deg,#f43f5e,#ef4444);}
-  .avatar.b{background:linear-gradient(135deg,#4f46e5,#2563eb);}
-  .bubble{
-    max-width:74%; padding:11px 15px; border-radius:14px; line-height:1.6;
-    white-space:pre-wrap; word-break:break-word; box-shadow:var(--shadow); font-size:14.5px;
-  }
-  .msg.user{flex-direction:row-reverse;}
-  .msg.user .bubble{
-    background:linear-gradient(135deg,#4f46e5,#2563eb); color:#fff; border-top-right-radius:4px;
-  }
-  .msg.bot .bubble{
-    background:var(--bot-bg); color:var(--text); border:1px solid var(--bot-border); border-top-left-radius:4px;
-  }
-  .typing span{
-    display:inline-block; width:7px; height:7px; margin-right:4px; border-radius:50%;
-    background:var(--muted); animation:blink 1.2s infinite;
-  }
-  .typing span:nth-child(2){animation-delay:.2s;}
-  .typing span:nth-child(3){animation-delay:.4s;}
-  @keyframes blink{0%,60%,100%{opacity:.25; transform:translateY(0);}30%{opacity:1; transform:translateY(-3px);}}
-  @keyframes fade{from{opacity:0; transform:translateY(6px);}to{opacity:1; transform:none;}}
-  .bar{
-    display:flex; gap:10px; padding:14px 20px; border-top:1px solid var(--bot-border);
-    background:#fff; align-items:flex-end;
-  }
-  #input{
-    flex:1; resize:none; height:48px; padding:12px 14px; border:1.5px solid var(--bot-border);
-    border-radius:14px; outline:none; font-size:14px; color:var(--text); background:#fbfcfe;
-    font-family:inherit; transition:border-color .2s;
-  }
-  #input:focus{border-color:var(--accent); background:#fff;}
-  button.send{
-    padding:0 22px; height:48px; border:none; border-radius:14px;
-    background:linear-gradient(135deg,#4f46e5,#2563eb); color:#fff; cursor:pointer;
-    font-size:15px; font-weight:500; transition:transform .12s, box-shadow .2s;
-  }
-  button.send:hover{box-shadow:0 4px 14px rgba(37,99,235,.35);}
-  button.send:active{transform:scale(.96);}
-  button.send:disabled{opacity:.5; cursor:not-allowed; box-shadow:none;}
-  .footer-tag{
-    margin-top:auto; text-align:center; font-size:11px; color:var(--muted); padding-top:8px;
-    border-top:1px dashed var(--bot-border);
-  }
-  .footer-tag a{color:var(--accent); text-decoration:none;}
-  .footer-tag a:hover{text-decoration:underline;}
-  @media(max-width:1100px){
-    .layout{grid-template-columns:1fr;}
-    .side{display:none;}
-  }
-  @media(max-width:560px){
-    .layout{padding:0; max-width:100%; height:100vh;}
-    .chat{border-radius:0;}
-    .bubble{max-width:84%;}
-  }
-</style>
-</head>
-<body>
-<div class="layout">
-  <aside class="side" id="leftSide">
-    <h3>快速体验</h3>
-    <p class="tip">点击下方按钮，自动填入示例问题，演示 4 个工具与知识库检索</p>
-    <button class="quick" data-q="查询 Chroma 向量库的 L2 距离阈值建议"><span class="icon">🔍</span><span>检索本地知识库</span></button>
-    <button class="quick" data-q="查一下深圳现在的天气"><span class="icon">🌤️</span><span>实时天气查询</span></button>
-    <button class="quick" data-q="抓取 https://langchain.com 的标题"><span class="icon">🌐</span><span>网页内容抓取</span></button>
-    <button class="quick" data-q="帮我算 233 * 17 + 99"><span class="icon">🧮</span><span>数学计算</span></button>
+  <!DOCTYPE html>
+  <html lang="zh-CN">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LangGraph Agent 聊天</title>
+  <style>
+    :root{
+      --bg:#eef1f6; --panel:#ffffff; --text:#1f2937; --muted:#8a94a6;
+      --accent:#4f46e5; --accent2:#2563eb; --bot-bg:#ffffff; --bot-border:#e6eaf2;
+      --shadow:0 6px 20px rgba(31,41,55,.08);
+    }
+    *{box-sizing:border-box;}
+    html,body{height:100%;}
+    body{
+      margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+      background:linear-gradient(160deg,#e9edf5 0%, #f6f8fc 100%); color:var(--text);
+    }
+    .layout{
+      max-width:1200px; margin:0 auto; height:100vh; display:grid;
+      grid-template-columns:240px 1fr 240px; gap:14px; padding:14px;
+    }
+    .side{
+      background:var(--panel); border-radius:14px; box-shadow:var(--shadow);
+      padding:14px; display:flex; flex-direction:column; gap:10px;
+      overflow-y:auto;
+    }
+    .side h3{
+      font-size:12px; margin:4px 6px 0; color:var(--muted);
+      letter-spacing:1px; text-transform:uppercase;
+    }
+    .side p.tip{font-size:11.5px; color:var(--muted); margin:0 6px 6px; line-height:1.5;}
+    .quick{
+      text-align:left; border:1px solid var(--bot-border); background:#fbfcfe;
+      padding:9px 11px; border-radius:10px; cursor:pointer;
+      transition:all .15s; font-size:13px; color:var(--text);
+      display:flex; gap:9px; align-items:flex-start;
+    }
+    .quick:hover{border-color:var(--accent); background:#f4f6ff; transform:translateX(2px);}
+    .quick .icon{
+      flex:0 0 22px; width:22px; height:22px; border-radius:6px;
+      background:linear-gradient(135deg,#4f46e5,#2563eb); color:#fff;
+      display:flex; align-items:center; justify-content:center; font-size:12px;
+    }
+    .stat{
+      display:flex; justify-content:space-between; padding:7px 10px;
+      background:#f7f9fd; border-radius:8px; font-size:12px;
+    }
+    .stat span:first-child{color:var(--muted);}
+    .stat span:last-child{color:var(--text); font-weight:500;}
+    .status-dot{
+      display:inline-block; width:8px; height:8px; border-radius:50%;
+      background:#10b981; box-shadow:0 0 6px rgba(16,185,129,.6); margin-right:5px;
+      vertical-align:middle;
+    }
+    .status-dot.off{background:#94a3b8; box-shadow:none;}
+    .tool-active{
+      background:linear-gradient(135deg,#ede9fe,#dbeafe);
+      color:var(--accent); padding:7px 10px; border-radius:8px;
+      font-size:12.5px; text-align:center; font-weight:500;
+      animation:pulse 1.4s infinite;
+    }
+    @keyframes pulse{0%,100%{opacity:.85;}50%{opacity:1;}}
+    .btn-mini{
+      border:none; padding:7px 10px; border-radius:8px; cursor:pointer;
+      background:#f1f3f8; color:var(--text); font-size:12px; transition:background .15s;
+    }
+    .btn-mini:hover{background:#e3e7f0;}
+    .chat{
+      display:flex; flex-direction:column; background:var(--panel);
+      border-radius:14px; box-shadow:var(--shadow); overflow:hidden;
+    }
+    header{
+      padding:16px 20px; background:linear-gradient(135deg,#4f46e5,#2563eb);
+      color:#fff; box-shadow:0 2px 12px rgba(37,99,235,.25);
+    }
+    header h1{font-size:17px; margin:0; letter-spacing:.5px;}
+    header .sub{font-size:12px; opacity:.85; margin-top:5px;}
+    .top{
+      display:flex; gap:12px; align-items:center; padding:9px 20px;
+      background:#f7f9fd; font-size:12px; color:var(--muted);
+      border-bottom:1px solid var(--bot-border);
+    }
+    .top input[type=text]{
+      width:170px; padding:5px 10px; border:1px solid var(--bot-border);
+      border-radius:8px; color:var(--text); background:#fff; outline:none;
+    }
+    .top input[type=text]:focus{border-color:var(--accent);}
+    .top label{display:flex; gap:5px; align-items:center; cursor:pointer;}
+    #msgs{
+      flex:1; overflow-y:auto; padding:18px 20px; display:flex; flex-direction:column; gap:14px;
+    }
+    #msgs::-webkit-scrollbar{width:8px;}
+    #msgs::-webkit-scrollbar-thumb{background:#cfd6e4; border-radius:8px;}
+    .msg{display:flex; gap:10px; align-items:flex-start; animation:fade .25s ease;}
+    .avatar{
+      width:34px; height:34px; flex:0 0 34px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center; font-size:17px; color:#fff;
+    }
+    .avatar.u{background:linear-gradient(135deg,#f43f5e,#ef4444);}
+    .avatar.b{background:linear-gradient(135deg,#4f46e5,#2563eb);}
+    .bubble{
+      max-width:74%; padding:11px 15px; border-radius:14px; line-height:1.6;
+      white-space:pre-wrap; word-break:break-word; box-shadow:var(--shadow); font-size:14.5px;
+    }
+    .msg.user{flex-direction:row-reverse;}
+    .msg.user .bubble{
+      background:linear-gradient(135deg,#4f46e5,#2563eb); color:#fff; border-top-right-radius:4px;
+    }
+    .msg.bot .bubble{
+      background:var(--bot-bg); color:var(--text); border:1px solid var(--bot-border); border-top-left-radius:4px;
+    }
+    .typing span{
+      display:inline-block; width:7px; height:7px; margin-right:4px; border-radius:50%;
+      background:var(--muted); animation:blink 1.2s infinite;
+    }
+    .typing span:nth-child(2){animation-delay:.2s;}
+    .typing span:nth-child(3){animation-delay:.4s;}
+    @keyframes blink{0%,60%,100%{opacity:.25; transform:translateY(0);}30%{opacity:1; transform:translateY(-3px);}}
+    @keyframes fade{from{opacity:0; transform:translateY(6px);}to{opacity:1; transform:none;}}
+    .bar{
+      display:flex; gap:10px; padding:14px 20px; border-top:1px solid var(--bot-border);
+      background:#fff; align-items:flex-end;
+    }
+    #input{
+      flex:1; resize:none; height:48px; padding:12px 14px; border:1.5px solid var(--bot-border);
+      border-radius:14px; outline:none; font-size:14px; color:var(--text); background:#fbfcfe;
+      font-family:inherit; transition:border-color .2s;
+    }
+    #input:focus{border-color:var(--accent); background:#fff;}
+    button.send{
+      padding:0 22px; height:48px; border:none; border-radius:14px;
+      background:linear-gradient(135deg,#4f46e5,#2563eb); color:#fff; cursor:pointer;
+      font-size:15px; font-weight:500; transition:transform .12s, box-shadow .2s;
+    }
+    button.send:hover{box-shadow:0 4px 14px rgba(37,99,235,.35);}
+    button.send:active{transform:scale(.96);}
+    button.send:disabled{opacity:.5; cursor:not-allowed; box-shadow:none;}
+    .footer-tag{
+      margin-top:auto; text-align:center; font-size:11px; color:var(--muted); padding-top:8px;
+      border-top:1px dashed var(--bot-border);
+    }
+    .footer-tag a{color:var(--accent); text-decoration:none;}
+    .footer-tag a:hover{text-decoration:underline;}
 
-    <h3 style="margin-top:10px;">聊天统计</h3>
-    <div class="stat"><span>气泡总数</span><span id="msgCount">0</span></div>
-    <div class="stat"><span>已发送</span><span id="sentCount">0</span></div>
-    <div class="stat" style="display:block;"><span style="display:block;margin-bottom:4px;">最新提问</span><span id="lastQuery" style="display:block;color:var(--accent);font-size:12px;">—</span></div>
-  </aside>
+    /* ===== 登录 / 注册页（整页视图）===== */
+    .auth-page{
+      position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    }
+    .auth-card{
+      background:#fff; border-radius:16px; padding:32px 28px; width:360px;
+      box-shadow:0 12px 44px rgba(31,41,55,.14); display:flex; flex-direction:column; gap:12px;
+    }
+    .auth-card h2{margin:0; font-size:20px; text-align:center; letter-spacing:.5px;}
+    .auth-card .sub{text-align:center; font-size:12px; color:var(--muted); margin:-4px 0 6px;}
+    .auth-card input{
+      padding:11px 14px; border:1.5px solid var(--bot-border); border-radius:10px;
+      outline:none; font-size:14px; background:#fbfcfe; transition:border-color .2s;
+    }
+    .auth-card input:focus{border-color:var(--accent); background:#fff;}
+    .auth-card button.primary{
+      padding:12px; border:none; border-radius:10px; cursor:pointer;
+      background:linear-gradient(135deg,#4f46e5,#2563eb); color:#fff;
+      font-size:15px; font-weight:500; transition:transform .12s, box-shadow .2s;
+    }
+    .auth-card button.primary:hover{box-shadow:0 4px 14px rgba(37,99,235,.35);}
+    .auth-card button.primary:active{transform:scale(.97);}
+    .auth-switch{text-align:center; font-size:13px; color:var(--muted); margin:0;}
+    .auth-switch a{color:var(--accent); cursor:pointer; text-decoration:none; font-weight:500;}
+    .auth-switch a:hover{text-decoration:underline;}
+    .auth-tip{font-size:12px; color:#ef4444; text-align:center; min-height:16px; margin:0;}
 
-  <main class="chat">
-    <header>
-      <h1>🤖 LangGraph Agent 聊天</h1>
-      <div class="sub">DeepSeek + LangGraph · 多轮记忆持久化（AsyncSqliteSaver）· 工具调用 / 流式输出</div>
-    </header>
-    <div class="top">
-      <label>Thread ID：</label>
-      <input type="text" id="thread" value="user_001">
-      <label><input type="checkbox" id="stream" checked> 流式输出</label>
+    @media(max-width:1100px){
+      .layout{grid-template-columns:1fr;}
+      .side{display:none;}
+    }
+    @media(max-width:560px){
+      .layout{padding:0; max-width:100%; height:100vh;}
+      .chat{border-radius:0;}
+      .bubble{max-width:84%;}
+    }
+  </style>
+  </head>
+  <body>
+
+  <!-- ===== 登录视图 ===== -->
+  <div class="auth-page" id="loginView" style="display:none;">
+    <div class="auth-card">
+      <h2>🔐 登录</h2>
+      <p class="sub">LangGraph Agent 测试助手</p>
+      <input type="text" id="loginUser" placeholder="用户名">
+      <input type="password" id="loginPass" placeholder="密码">
+      <button class="primary" id="loginBtn">登 录</button>
+      <p class="auth-switch">没有账号？<a id="toRegister">去注册</a></p>
+      <p class="auth-tip" id="loginTip"></p>
     </div>
-    <div id="msgs"></div>
-    <div class="bar">
-      <textarea id="input" placeholder="输入消息，Enter 发送（Shift+Enter 换行）"></textarea>
-      <button class="send" id="send">发送</button>
+  </div>
+
+  <!-- ===== 注册视图 ===== -->
+  <div class="auth-page" id="registerView" style="display:none;">
+    <div class="auth-card">
+      <h2>📝 注册</h2>
+      <p class="sub">创建账号，开始使用</p>
+      <input type="text" id="regUser" placeholder="用户名">
+      <input type="password" id="regPass" placeholder="密码">
+      <button class="primary" id="registerBtn">注 册</button>
+      <p class="auth-switch">已有账号？<a id="toLogin">去登录</a></p>
+      <p class="auth-tip" id="regTip"></p>
     </div>
-  </main>
+  </div>
 
-  <aside class="side" id="rightSide">
-    <h3>会话状态</h3>
-    <div class="stat"><span>连接</span><span><span class="status-dot" id="connDot"></span><span id="connTxt">已连接</span></span></div>
-    <div class="stat"><span>输出模式</span><span id="modeTxt">流式 SSE</span></div>
-    <div class="stat"><span>持久化</span><span>checkpoints.db</span></div>
+  <!-- ===== 首页视图（聊天）===== -->
+  <div id="homeView" style="display:none;">
+  <div class="layout">
+    <aside class="side" id="leftSide">
+      <h3>快速体验</h3>
+      <p class="tip">点击下方按钮，自动填入示例问题，演示 4 个工具与知识库检索</p>
+      <button class="quick" data-q="查询 Chroma 向量库的 L2 距离阈值建议"><span
+  class="icon">🔍</span><span>检索本地知识库</span></button>
+      <button class="quick" data-q="查一下深圳现在的天气"><span class="icon">🌤️</span><span>实时天气查询</span></button>
+      <button class="quick" data-q="抓取 https://langchain.com 的标题"><span
+  class="icon">🌐</span><span>网页内容抓取</span></button>
+      <button class="quick" data-q="帮我算 233 * 17 + 99"><span class="icon">🧮</span><span>数学计算</span></button>
 
-    <h3 style="margin-top:10px;">当前活跃</h3>
-    <div class="tool-active" id="toolActive">⏳ 空闲</div>
+      <h3 style="margin-top:10px;">聊天统计</h3>
+      <div class="stat"><span>气泡总数</span><span id="msgCount">0</span></div>
+      <div class="stat"><span>已发送</span><span id="sentCount">0</span></div>
+      <div class="stat" style="display:block;"><span style="display:block;margin-bottom:4px;">最新提问</span><span
+  id="lastQuery" style="display:block;color:var(--accent);font-size:12px;">—</span></div>
+    </aside>
 
-    <h3 style="margin-top:10px;">操作</h3>
-    <button class="btn-mini" id="resetBtn">↺ 清空对话</button>
+    <main class="chat">
+      <header>
+        <h1>🤖 LangGraph Agent 聊天</h1>
+        <div class="sub">DeepSeek + LangGraph · 多轮记忆持久化（AsyncSqliteSaver）· 工具调用 / 流式输出</div>
+      </header>
+      <div class="top">
+        <label>Thread ID：</label>
+        <input type="text" id="thread" value="user_001">
+        <label><input type="checkbox" id="stream" checked> 流式输出</label>
+      </div>
+      <div id="msgs"></div>
+      <div class="bar">
+        <textarea id="input" placeholder="输入消息，Enter 发送（Shift+Enter 换行）"></textarea>
+        <button class="send" id="send">发送</button>
+      </div>
+    </main>
 
-    <div class="footer-tag">
-      ⚡ Powered by <strong>LangGraph</strong><br>
-      <a href="https://github.com/zhouhao1a/langgraph-rag-agent" target="_blank">
-        github.com/zhouhao1a/langgraph-rag-agent
-      </a>
-    </div>
-  </aside>
-</div>
-<script>
-const msgs = document.getElementById("msgs");
-const input = document.getElementById("input");
-const threadEl = document.getElementById("thread");
-const streamEl = document.getElementById("stream");
-const sendBtn = document.getElementById("send");
-const msgCountEl = document.getElementById("msgCount");
-const sentCountEl = document.getElementById("sentCount");
-const lastQueryEl = document.getElementById("lastQuery");
-const toolActiveEl = document.getElementById("toolActive");
-const connDot = document.getElementById("connDot");
-const connTxt = document.getElementById("connTxt");
-const modeTxt = document.getElementById("modeTxt");
-const resetBtn = document.getElementById("resetBtn");
+    <aside class="side" id="rightSide">
+      <h3>登录状态</h3>
+      <div class="stat"><span>当前用户</span><span id="currentUser">未登录</span></div>
+      <button class="btn-mini" id="logoutBtn">↩ 退出登录</button>
 
-let sentCount = 0;
+      <h3 style="margin-top:10px;">会话状态</h3>
+      <div class="stat"><span>连接</span><span><span class="status-dot" id="connDot"></span><span
+  id="connTxt">已连接</span></span></div>
+      <div class="stat"><span>输出模式</span><span id="modeTxt">流式 SSE</span></div>
+      <div class="stat"><span>持久化</span><span>checkpoints.db</span></div>
 
-function refreshMsgCount(){
-  msgCountEl.textContent = msgs.querySelectorAll(".msg").length;
-}
+      <h3 style="margin-top:10px;">当前活跃</h3>
+      <div class="tool-active" id="toolActive">⏳ 空闲</div>
 
-streamEl.addEventListener("change", () => {
-  modeTxt.textContent = streamEl.checked ? "流式 SSE" : "非流式 JSON";
-});
+      <h3 style="margin-top:10px;">操作</h3>
+      <button class="btn-mini" id="resetBtn">↺ 清空对话</button>
 
-function addMsg(role, text){
-  const wrap = document.createElement("div");
-  wrap.className = "msg " + role;
-  const avatar = document.createElement("div");
-  avatar.className = "avatar " + (role === "user" ? "u" : "b");
-  avatar.textContent = role === "user" ? "🙋" : "🤖";
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  bubble.textContent = text;
-  wrap.appendChild(avatar);
-  wrap.appendChild(bubble);
-  msgs.appendChild(wrap);
-  msgs.scrollTop = msgs.scrollHeight;
-  refreshMsgCount();
-  return bubble;
-}
+      <div class="footer-tag">
+        ⚡ Powered by <strong>LangGraph</strong><br>
+        <a href="https://github.com/zhouhao1a/langgraph-rag-agent" target="_blank">
+          github.com/zhouhao1a/langgraph-rag-agent
+        </a>
+      </div>
+    </aside>
+  </div>
+  </div>
 
-function showTyping(){
-  const wrap = document.createElement("div");
-  wrap.className = "msg bot";
-  const avatar = document.createElement("div");
-  avatar.className = "avatar b";
-  avatar.textContent = "🤖";
-  const bubble = document.createElement("div");
-  bubble.className = "bubble typing";
-  bubble.innerHTML = "<span></span><span></span><span></span>";
-  wrap.appendChild(avatar);
-  wrap.appendChild(bubble);
-  msgs.appendChild(wrap);
-  msgs.scrollTop = msgs.scrollHeight;
-  return bubble;
-}
+  <script>
+  const msgs = document.getElementById("msgs");
+  const input = document.getElementById("input");
+  const threadEl = document.getElementById("thread");
+  const streamEl = document.getElementById("stream");
+  const sendBtn = document.getElementById("send");
+  const msgCountEl = document.getElementById("msgCount");
+  const sentCountEl = document.getElementById("sentCount");
+  const lastQueryEl = document.getElementById("lastQuery");
+  const toolActiveEl = document.getElementById("toolActive");
+  const connDot = document.getElementById("connDot");
+  const connTxt = document.getElementById("connTxt");
+  const modeTxt = document.getElementById("modeTxt");
+  const resetBtn = document.getElementById("resetBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const currentUserEl = document.getElementById("currentUser");
 
-async function send(){
-  const q = input.value.trim();
-  if(!q) return;
-  input.value = "";
-  addMsg("user", q);
-  sentCount++;
-  sentCountEl.textContent = sentCount;
-  lastQueryEl.textContent = q.length > 18 ? q.slice(0, 18) + "…" : q;
-  const tid = threadEl.value.trim() || "user_001";
-  const typingBubble = showTyping();
-  toolActiveEl.textContent = "🤔 Agent 思考中…";
-  sendBtn.disabled = true;
-  connDot.classList.add("off");
-  connTxt.textContent = "通信中";
-  try {
-    if (streamEl.checked){
-      const resp = await fetch("/chat/stream", {
+  // 三个视图
+  const loginView = document.getElementById("loginView");
+  const registerView = document.getElementById("registerView");
+  const homeView = document.getElementById("homeView");
+
+  // 登录页元素
+  const loginUser = document.getElementById("loginUser");
+  const loginPass = document.getElementById("loginPass");
+  const loginBtn = document.getElementById("loginBtn");
+  const loginTip = document.getElementById("loginTip");
+  const toRegister = document.getElementById("toRegister");
+
+  // 注册页元素
+  const regUser = document.getElementById("regUser");
+  const regPass = document.getElementById("regPass");
+  const registerBtn = document.getElementById("registerBtn");
+  const regTip = document.getElementById("regTip");
+  const toLogin = document.getElementById("toLogin");
+
+  let sentCount = 0;
+
+  /* ===== 视图切换（路由守卫的核心）===== */
+  function showView(name){
+    loginView.style.display    = name === "login"    ? "flex" : "none";
+    registerView.style.display = name === "register" ? "flex" : "none";
+    homeView.style.display     = name === "home"     ? "block" : "none";
+  }
+
+  /* ===== 鉴权 ===== */
+  function getToken(){ return localStorage.getItem("token"); }
+
+  function authHeaders(){
+    return {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + (getToken() || "")
+    };
+  }
+
+  async function doLogin(){
+    const username = loginUser.value.trim();
+    const password = loginPass.value;
+    if (!username || !password){ loginTip.textContent = "用户名和密码不能为空"; return; }
+    loginTip.textContent = "登录中…";
+    try {
+      const resp = await fetch("/auth/login", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({query: q, thread_id: tid})
+        body: JSON.stringify({username, password})
       });
-      if (!resp.ok) throw new Error("HTTP " + resp.status);
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "", first = true;
-      while (true){
-        const {done, value} = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, {stream: true});
-        let idx;
-        while ((idx = buf.indexOf("\n\n")) >= 0){
-          const line = buf.slice(0, idx);
-          buf = buf.slice(idx + 2);
-          if (line.startsWith("data: ")){
-            const text = line.slice(6);
-            if (first){
-              typingBubble.className = "bubble";
-              typingBubble.textContent = text;
-              first = false;
-              refreshMsgCount();
-            } else {
-              typingBubble.textContent += text;
+      const data = await resp.json();
+      if (data.code === 0 && data.data && data.data.token){
+        localStorage.setItem("token", data.data.token);
+        localStorage.setItem("username", username);
+        currentUserEl.textContent = username;
+        loginPass.value = "";
+        loginTip.textContent = "";
+        showView("home");   // ← 登录成功，跳转首页
+      } else {
+        loginTip.textContent = data.message || "登录失败";
+      }
+    } catch (e){
+      loginTip.textContent = "请求失败：" + e.message;
+    }
+  }
+
+  async function doRegister(){
+    const username = regUser.value.trim();
+    const password = regPass.value;
+    if (!username || !password){ regTip.textContent = "用户名和密码不能为空"; return; }
+    regTip.textContent = "注册中…";
+    try {
+      const resp = await fetch("/auth/register", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({username, password})
+      });
+      const data = await resp.json();
+      if (data.code === 0){
+        regTip.textContent = "注册成功，正在登录…";
+        loginUser.value = username;
+        loginPass.value = password;
+        await doLogin();   // 注册成功自动登录
+      } else {
+        regTip.textContent = data.message || "注册失败";
+      }
+    } catch (e){
+      regTip.textContent = "请求失败：" + e.message;
+    }
+  }
+
+  function doLogout(){
+    localStorage.removeItem("token");
+    localStorage.removeItem("username");
+    currentUserEl.textContent = "未登录";
+    loginUser.value = "";
+    loginPass.value = "";
+    showView("login");   // ← 退出，跳回登录页
+  }
+
+  loginBtn.addEventListener("click", doLogin);
+  registerBtn.addEventListener("click", doRegister);
+  logoutBtn.addEventListener("click", doLogout);
+  toRegister.addEventListener("click", () => { loginTip.textContent = ""; showView("register"); });
+  toLogin.addEventListener("click", () => { regTip.textContent = ""; showView("login"); });
+  loginPass.addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+  regPass.addEventListener("keydown", e => { if (e.key === "Enter") doRegister(); });
+
+  function refreshMsgCount(){
+    msgCountEl.textContent = msgs.querySelectorAll(".msg").length;
+  }
+
+  streamEl.addEventListener("change", () => {
+    modeTxt.textContent = streamEl.checked ? "流式 SSE" : "非流式 JSON";
+  });
+
+  function addMsg(role, text){
+    const wrap = document.createElement("div");
+    wrap.className = "msg " + role;
+    const avatar = document.createElement("div");
+    avatar.className = "avatar " + (role === "user" ? "u" : "b");
+    avatar.textContent = role === "user" ? "🙋" : "🤖";
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = text;
+    wrap.appendChild(avatar);
+    wrap.appendChild(bubble);
+    msgs.appendChild(wrap);
+    msgs.scrollTop = msgs.scrollHeight;
+    refreshMsgCount();
+    return bubble;
+  }
+
+  function showTyping(){
+    const wrap = document.createElement("div");
+    wrap.className = "msg bot";
+    const avatar = document.createElement("div");
+    avatar.className = "avatar b";
+    avatar.textContent = "🤖";
+    const bubble = document.createElement("div");
+    bubble.className = "bubble typing";
+    bubble.innerHTML = "<span></span><span></span><span></span>";
+    wrap.appendChild(avatar);
+    wrap.appendChild(bubble);
+    msgs.appendChild(wrap);
+    msgs.scrollTop = msgs.scrollHeight;
+    return bubble;
+  }
+
+  async function send(){
+    if (!getToken()){ showView("login"); return; }
+    const q = input.value.trim();
+    if(!q) return;
+    input.value = "";
+    addMsg("user", q);
+    sentCount++;
+    sentCountEl.textContent = sentCount;
+    lastQueryEl.textContent = q.length > 18 ? q.slice(0, 18) + "…" : q;
+    const tid = threadEl.value.trim() || "user_001";
+    const typingBubble = showTyping();
+    toolActiveEl.textContent = "🤔 Agent 思考中…";
+    sendBtn.disabled = true;
+    connDot.classList.add("off");
+    connTxt.textContent = "通信中";
+    try {
+      if (streamEl.checked){
+        const resp = await fetch("/chat/stream", {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({query: q, thread_id: tid})
+        });
+        if (resp.status === 401){ showView("login"); loginTip.textContent = "登录已失效，请重新登录"; return; }
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "", first = true;
+        while (true){
+          const {done, value} = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, {stream: true});
+          let idx;
+          while ((idx = buf.indexOf("\n\n")) >= 0){
+            const line = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            if (line.startsWith("data: ")){
+              const text = line.slice(6);
+              if (first){
+                typingBubble.className = "bubble";
+                typingBubble.textContent = text;
+                first = false;
+                refreshMsgCount();
+              } else {
+                typingBubble.textContent += text;
+              }
+              msgs.scrollTop = msgs.scrollHeight;
+              toolActiveEl.textContent = "💬 正在生成回复…";
             }
-            msgs.scrollTop = msgs.scrollHeight;
-            toolActiveEl.textContent = "💬 正在生成回复…";
           }
         }
+        if (first) typingBubble.textContent = "(无输出)";
+      } else {
+        const resp = await fetch("/chat/once", {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({query: q, thread_id: tid})
+        });
+        if (resp.status === 401){ showView("login"); loginTip.textContent = "登录已失效，请重新登录"; return; }
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        const data = await resp.json();
+        typingBubble.className = "bubble";
+        typingBubble.textContent = data.data?.answer ?? data.message;
+        refreshMsgCount();
       }
-      if (first) typingBubble.textContent = "(无输出)";
-    } else {
-      const resp = await fetch("/chat/once", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({query: q, thread_id: tid})
-      });
-      if (!resp.ok) throw new Error("HTTP " + resp.status);
-      const data = await resp.json();
+      toolActiveEl.textContent = "✅ 已完成 · 第 " + sentCount + " 次对话";
+    } catch (e){
       typingBubble.className = "bubble";
-     typingBubble.textContent = data.data?.answer ?? data.message;
-      refreshMsgCount();
+      typingBubble.textContent = "请求失败：" + e.message +
+        "\n请确认后端已启动（uvicorn main:app --reload）";
+      connDot.classList.remove("off");
+      toolActiveEl.textContent = "❌ 连接失败";
+    } finally {
+      connDot.classList.remove("off");
+      connTxt.textContent = "已连接";
+      sendBtn.disabled = false;
     }
-    toolActiveEl.textContent = "✅ 已完成 · 第 " + sentCount + " 次对话";
-  } catch (e){
-    typingBubble.className = "bubble";
-    typingBubble.textContent = "请求失败：" + e.message +
-      "\n请确认后端已启动（uvicorn main:app --reload）";
-    connDot.classList.remove("off");
-    toolActiveEl.textContent = "❌ 连接失败";
-  } finally {
-    connDot.classList.remove("off");
-    connTxt.textContent = "已连接";
-    sendBtn.disabled = false;
   }
-}
 
-document.querySelectorAll(".quick").forEach(btn => {
-  btn.addEventListener("click", () => {
-    input.value = btn.dataset.q;
-    input.focus();
+  document.querySelectorAll(".quick").forEach(btn => {
+    btn.addEventListener("click", () => {
+      input.value = btn.dataset.q;
+      input.focus();
+    });
   });
-});
 
-resetBtn.addEventListener("click", () => {
-  msgs.innerHTML = "";
-  sentCount = 0;
-  sentCountEl.textContent = "0";
-  lastQueryEl.textContent = "—";
-  toolActiveEl.textContent = "⏳ 空闲";
-  refreshMsgCount();
-});
+  resetBtn.addEventListener("click", () => {
+    msgs.innerHTML = "";
+    sentCount = 0;
+    sentCountEl.textContent = "0";
+    lastQueryEl.textContent = "—";
+    toolActiveEl.textContent = "⏳ 空闲";
+    refreshMsgCount();
+  });
 
-input.addEventListener("keydown", function(e){
-  if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
-});
-sendBtn.addEventListener("click", send);
-</script>
-</body>
-</html>
+  input.addEventListener("keydown", function(e){
+    if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
+  });
+  sendBtn.addEventListener("click", send);
+
+  // 初始路由守卫：有 token 进首页，没有进登录页
+  if (getToken()){
+    currentUserEl.textContent = localStorage.getItem("username") || "已登录";
+    showView("home");
+  } else {
+    showView("login");
+  }
+  </script>
+  </body>
+  </html>

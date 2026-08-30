@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 # 往上回退两层，回到项目根目录
-root_path = Path(__file__).parent.parent.parent
+root_path = Path(__file__).parent.parent
 sys.path.append(str(root_path))
 import requests
 

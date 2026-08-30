@@ -1,5 +1,5 @@
 # 测试截图、本地文档
-docs/test_record/
+tests/test_docs/test_record/
 # 缓存文件
 __pycache__/
 *.pyc

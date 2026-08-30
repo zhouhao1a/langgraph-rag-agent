@@ -1,10 +1,10 @@
 import sys
 from pathlib import Path
 
-root_path = Path(__file__).parent.parent.parent
+root_path = Path(__file__).parent.parent
 sys.path.append(str(root_path))
 
-from app.tools import calculator
+from app.agent.tools import calculator
 
 
 def test_calculator_multiply():

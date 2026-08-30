@@ -1,13 +1,10 @@
-import os
-import os
-
-os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+from app.core.config import HF_ENDPOINT
 import json
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from app.tools import search_kb
+from app.agent.tools import search_kb
 
 
 def load_eval_set(path="data/eval_set.json"):
