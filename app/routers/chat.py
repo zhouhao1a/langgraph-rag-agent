@@ -4,17 +4,19 @@ from sqlalchemy import select
 from starlette.responses import StreamingResponse
 from app.agent.agent import run_agent
 from app.core.deps import get_current_user
+from app.core.rate_limit import rate_limit_chat
 from app.models.base import SessionLocal
 from app.models.chat_history import ChatHistory
+from app.models.test_case import TestCase
 from app.models.user import User
 from app.schemas.chat import ChatRequest
-from app.schemas.common import ok
+from app.schemas.common import ok, fail
 
 router = APIRouter()
 
 
 @router.post("/chat/stream")
-async def chat(req: ChatRequest, request: Request, user:User=Depends(get_current_user)):
+async def chat(req: ChatRequest, request: Request, user:User=Depends(rate_limit_chat)):
     """
         接收前端POST ，前端会传一个json格式的post
         json:
@@ -39,13 +41,13 @@ async def chat(req: ChatRequest, request: Request, user:User=Depends(get_current
 
 
 @router.post("/chat/once")
-async def chat_once(req: ChatRequest, request: Request, user:User=Depends(get_current_user)):
+async def chat_once(req: ChatRequest, request: Request, user:User=Depends(rate_limit_chat)):
         full_answer = ""
         async for chunk in run_agent(req.query, req.thread_id,graph=request.app.state.graph):
                 full_answer += chunk.content
         async with SessionLocal() as session:
-            session.add(ChatHistory(thread_id=req.thread_id,role="user",content=req.query))
-            session.add(ChatHistory(thread_id=req.thread_id, role="assistant", content=full_answer))
+            session.add(ChatHistory(thread_id=req.thread_id,role="user",content=req.query,user_id=user.id))
+            session.add(ChatHistory(thread_id=req.thread_id, role="assistant", content=full_answer,user_id=user.id))
             await session.commit()         #给表加参数要按顺序不能并行
         # raise Exception("测试异常")
         return ok({"answer": full_answer})
@@ -55,7 +57,7 @@ async def chat_history(thread_id: str,user:User=Depends(get_current_user)):
       async with SessionLocal() as session:
           result = await session.execute(
                 select(ChatHistory).where(ChatHistory.thread_id ==
-  thread_id).order_by(ChatHistory.id)
+  thread_id,ChatHistory.user_id==user.id).order_by(ChatHistory.id)
           )
           rows = result.scalars().all()
       return ok({"messages": [{"role": r.role, "content": r.content} for r in rows]})

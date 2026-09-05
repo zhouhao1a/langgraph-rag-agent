@@ -1,0 +1,52 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: lg_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root          # 跟你 DB_URL 里的 root:root 对上
+      MYSQL_DATABASE: langgraph_agent    # 跟你 DB_URL 里的库名对上
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: lg_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  app:
+    build: .
+    container_name: lg_app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      #第二步！优先级更高，直接覆盖掉.env里面的DB_URL
+      - DB_URL=mysql+asyncmy://root:root@mysql:3306/langgraph_agent?charset=utf8mb4
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy   # 等 MySQL 真能 ping 通才启 app
+      redis:
+        condition: service_started
+
+volumes:
+  mysql_data:
+  redis_data:

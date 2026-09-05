@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy import select, func
 from app.core.deps import get_current_user
+from app.core.rate_limit import rate_limit_generate
 from app.models.base import SessionLocal
 from app.models.user import User
 from app.models.project import Project
@@ -102,7 +103,7 @@ async def delete_case(case_id: int, user: User = Depends(get_current_user)):
 
 
 @router.post("/generate")
-async def generate_cases(req: GenerateRequest, user: User = Depends(get_current_user)):
+async def generate_cases(req: GenerateRequest, user: User = Depends(rate_limit_generate)):
     async with SessionLocal() as session:
         proj = (await session.execute(select(Project).where(
             Project.id == req.project_id, Project.owner_id == user.id))).scalar_one_or_none()

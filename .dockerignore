@@ -1,0 +1,7 @@
+.env
+chroma_db/
+checkpoints.db
+__pycache__/
+*.pyc
+.git/
+.pytest_cache/

@@ -21,3 +21,5 @@ SEARCH_KB_THRESHOLD = float(os.getenv("SEARCH_KB_THRESHOLD", "0.9"))
 # ===== HuggingFace 镜像（国内直连）=====
 HF_ENDPOINT = "https://hf-mirror.com"
 os.environ.setdefault("HF_ENDPOINT", HF_ENDPOINT)  # huggingface_hub 读的是环境变量，顺手设进去
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
