@@ -11,6 +11,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 from fastapi import Depends, HTTPException
 
+
+"""
+他的作用是鉴权防护，还会返回user对象给你使用
+"""
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = verify_token(token)  # 过期/伪造会抛异常

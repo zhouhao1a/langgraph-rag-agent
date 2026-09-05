@@ -44,7 +44,7 @@ async def list_projects(page: int = 1, page_size: int = 10,
 @router.get("/{project_id}")
 async def get_project(project_id: int, user: User = Depends(get_current_user)):
     async with SessionLocal() as session:
-        p = (await session.execute(select(Project).where(Project.id == project_id))).scalar_one_or_none()
+        p = (await session.execute(select(Project).where(Project.id == project_id, Project.owner_id == user.id))).scalar_one_or_none()
     if not p:
         return fail("项目不存在")
     return ok(to_dict(p))
@@ -54,7 +54,7 @@ async def get_project(project_id: int, user: User = Depends(get_current_user)):
 async def update_project(project_id: int, req: ProjectUpdate,
                          user: User = Depends(get_current_user)):
     async with SessionLocal() as session:
-        p = (await session.execute(select(Project).where(Project.id == project_id))).scalar_one_or_none()
+        p = (await session.execute(select(Project).where(Project.id == project_id, Project.owner_id == user.id))).scalar_one_or_none()
         if not p:
             return fail("项目不存在")
         if req.name is not None: p.name = req.name
@@ -68,7 +68,7 @@ async def update_project(project_id: int, req: ProjectUpdate,
 @router.delete("/{project_id}")
 async def delete_project(project_id: int, user: User = Depends(get_current_user)):
     async with SessionLocal() as session:
-        p = (await session.execute(select(Project).where(Project.id == project_id))).scalar_one_or_none()
+        p = (await session.execute(select(Project).where(Project.id == project_id, Project.owner_id == user.id))).scalar_one_or_none()
         if not p:
             return fail("项目不存在")
         await session.delete(p)

@@ -1,4 +1,4 @@
-from fastapi import Depends,APIRouter
+from fastapi import Depends, APIRouter, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from starlette.responses import StreamingResponse
@@ -10,12 +10,11 @@ from app.models.user import User
 from app.schemas.chat import ChatRequest
 from app.schemas.common import ok
 
-
 router = APIRouter()
 
 
 @router.post("/chat/stream")
-async def chat(req: ChatRequest,user:User=Depends(get_current_user)):
+async def chat(req: ChatRequest, request: Request, user:User=Depends(get_current_user)):
     """
         接收前端POST ，前端会传一个json格式的post
         json:
@@ -28,7 +27,7 @@ async def chat(req: ChatRequest,user:User=Depends(get_current_user)):
 
 # 定义一个函数（生成器），循环拿agent吐出的一小块一小块chunk数据
     async def stream_generator():
-       async for chunk in run_agent(req.query,req.thread_id,graph=app.state.graph):
+       async for chunk in run_agent(req.query,req.thread_id,graph=request.app.state.graph):
 # 把拿到的小块数据包装成SSE规定格式往前端发
             yield f"data: {chunk.content}\n\n"
 # SSE流式响应，实现打字输出效果
@@ -40,9 +39,9 @@ async def chat(req: ChatRequest,user:User=Depends(get_current_user)):
 
 
 @router.post("/chat/once")
-async def chat_once(req: ChatRequest,user:User=Depends(get_current_user)):
+async def chat_once(req: ChatRequest, request: Request, user:User=Depends(get_current_user)):
         full_answer = ""
-        async for chunk in run_agent(req.query, req.thread_id,graph=app.state.graph):
+        async for chunk in run_agent(req.query, req.thread_id,graph=request.app.state.graph):
                 full_answer += chunk.content
         async with SessionLocal() as session:
             session.add(ChatHistory(thread_id=req.thread_id,role="user",content=req.query))

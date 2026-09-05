@@ -7,8 +7,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from app.models.base import init_db
 from app.schemas.common import fail
-from app.routers import chat, auth, projects, cases
-
+from app.routers import chat, auth, projects, cases, executions, dashboard
 
 # 定义fastapi生命周期，防止一直反复编译浪费资源
 @asynccontextmanager
@@ -28,8 +27,8 @@ app.include_router(chat.router)
 app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(cases.router)
-
-
+app.include_router(executions.router)
+app.include_router(dashboard.router)
 
 
 @app.exception_handler(Exception)

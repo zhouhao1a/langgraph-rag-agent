@@ -54,15 +54,16 @@ async def stream_answer(query: str, graph, config):
     print()
 
 
-async def run_agent(user_query: str, thread_id: str,graph=None):
-    # AsyncSqliteSaver 是异步版持久化 checkpointer，自动把每个 thread 的对话落盘到 checkpoints.db，通俗就是打开数据库
-    async with AsyncSqliteSaver.from_conn_string("checkpoints.db") as checkpointer:
-        graph = builder.compile(checkpointer=checkpointer)
-        config = {"configurable": {"thread_id": thread_id }}  # 同一个 thread_id = 同一段记忆
-        input_data = {"messages": [("user", user_query)]}
-        # astream 返回迭代器，用来做流式输出
-        # stream_mode="messages" 每次 yield 的是 (消息块, 元数据) 元组
-        # 解包出消息块，只转发 AI 文本，过滤用户提问(HumanMessage)和工具结果(ToolMessage)
+async def run_agent(user_query: str, thread_id: str, graph=None):
+    config = {"configurable": {"thread_id": thread_id}}  # 同一个 thread_id = 同一段记忆
+    input_data = {"messages": [("user", user_query)]}
+    if graph is None:
+        async with AsyncSqliteSaver.from_conn_string("checkpoints.db") as checkpointer:
+            graph = builder.compile(checkpointer=checkpointer)
+            async for message_chunk, _ in graph.astream(input_data, config, stream_mode="messages"):
+                if message_chunk.content and not isinstance(message_chunk, (HumanMessage, ToolMessage)):
+                    yield message_chunk
+    else:
         async for message_chunk, _ in graph.astream(input_data, config, stream_mode="messages"):
             if message_chunk.content and not isinstance(message_chunk, (HumanMessage, ToolMessage)):
                 yield message_chunk

@@ -14,6 +14,7 @@
 - **对话落 MySQL**：`/chat/once` 将 user / assistant 两条对话写入 MySQL（异步 SQLAlchemy + asyncmy），`/chat/history` 按 `thread_id` 查询历史。
 - **统一响应格式**：所有接口返回 `{code, message, data}`，并配置全局异常处理器兜底。
 - **分层架构**：`routers/`（路由）、`models/`（表）、`schemas/`（Pydantic）、`services/`（业务）、`core/`（配置/安全/依赖）。
+- **测试管理平台（V1.8）**：项目/用例 CRUD、AI 生成用例（结构化输出）、执行记录、统计看板，所有数据按 `user.id` 多租户隔离。
 - **质量保障**：pytest 单元测试（auth 密码/token、calculator 工具）+ RAG 评测集（24 条，阈值 0.9 下检索命中率 87.5%）。
 
 ## 系统架构
@@ -127,6 +128,20 @@ python main.py
 | POST | `/chat/stream` | **是** | SSE 流式输出，逐 token | `{"query": "...", "thread_id": "..."}` |
 | POST | `/chat/once` | **是** | 非流式一次性返回 + 落 MySQL | 同上 |
 | GET | `/chat/history` | **是** | 按 thread_id 查历史对话 | query 参数 `?thread_id=...` |
+| POST | `/projects` | **是** | 新建项目 | `{"name", "description"?, "status"?}` |
+| GET | `/projects` | **是** | 项目列表（分页） | `?page=&page_size=` |
+| GET | `/projects/{id}` | **是** | 项目详情 | — |
+| PUT | `/projects/{id}` | **是** | 更新项目 | `{"name"?,"description"?,"status"?}` |
+| DELETE | `/projects/{id}` | **是** | 删除项目 | — |
+| POST | `/cases` | **是** | 新建用例 | `{"project_id","title","module"?,"priority"?,"type"?,...}` |
+| GET | `/cases` | **是** | 用例列表（分页 + 按项目过滤） | `?page=&page_size=&project_id=` |
+| GET | `/cases/{id}` | **是** | 用例详情 | — |
+| PUT | `/cases/{id}` | **是** | 更新用例 | 字段可选 |
+| DELETE | `/cases/{id}` | **是** | 删除用例 | — |
+| POST | `/cases/generate` | **是** | AI 生成用例并入库 | `{"project_id","requirement","count"?}` |
+| POST | `/executions` | **是** | 记录一次执行 | `{"case_id","status"?,"remark"?}` |
+| GET | `/executions` | **是** | 执行历史（分页 + 按用例过滤） | `?case_id=&page=&page_size=` |
+| GET | `/dashboard/overview` | **是** | 统计看板（项目/用例/优先级/来源/执行通过率） | — |
 | GET | `/` | 否 | 同源托管前端页面 | — |
 
 鉴权示例（先登录拿 token，再访问受保护接口）：
@@ -180,4 +195,4 @@ LANGSMITH_PROJECT=my_langgraph_agent
 ## 待做
 
 - 401 返回的是 FastAPI 默认 `{"detail": ...}`，未统一进 `{code, message, data}`。
-- V1.8 测试管理平台模块进行中：项目管理、用例管理、AI 生成用例、实例执行、执行记录、统计看板、系统设置。
+- 聊天历史未按用户隔离：`ChatHistory` 无 `user_id` 字段，`/chat/history` 只按 thread_id 查（计划 V2.0 加 user 维度）。
