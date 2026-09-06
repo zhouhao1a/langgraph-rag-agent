@@ -1,7 +1,5 @@
-import asyncio
-from fastapi import FastAPI
+
 from ..core.config import DEEPSEEK_API_KEY, DEEPSEEK_API_BASE,HF_ENDPOINT
-from rich import print as rprint
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState, StateGraph, START, END
 from .tools import calculator, search_kb, scrape_web, get_weather
@@ -23,12 +21,9 @@ llm_with_tools = llm.bind_tools([calculator, search_kb, scrape_web, get_weather]
 tools = ToolNode([calculator, search_kb, get_weather, scrape_web])
 
 
-def agent(state: MessagesState):
-    messages=[SystemMessage(content="你是测试团队的AI助手，帮助测试工程师解答测试规范、缺陷管理、回归流程、""日志排查等问题。"
-                                    "涉及测试规范和流程的问题，必须调用search_kb工具查询知识库后再回答，禁止凭记忆编造。")]+state["messages"]
-
-
-    response = llm_with_tools.invoke(messages)
+def agent(state: MessagesState):  # 改回 def，别 async
+    messages = [SystemMessage(content="你是测试团队的AI助手...")] + state["messages"]
+    response = llm_with_tools.invoke(messages)  # 改回 invoke，别 ainvoke
     return {"messages": [response]}
 
 
@@ -54,8 +49,10 @@ async def stream_answer(query: str, graph, config):
     print()
 
 
-async def run_agent(user_query: str, thread_id: str, graph=None):
-    config = {"configurable": {"thread_id": thread_id}}  # 同一个 thread_id = 同一段记忆
+async def run_agent(user_query: str, thread_id: str,graph=None, user_id:int=None):
+    # user_id 拼进 thread_id，checkpointer 的 key 才天然带用户维度
+    key = f"{user_id}:{thread_id}" if user_id is not None else thread_id
+    config = {"configurable": {"thread_id": key}} # 同一个 thread_id = 同一段记忆
     input_data = {"messages": [("user", user_query)]}
     if graph is None:
         async with AsyncSqliteSaver.from_conn_string("checkpoints.db") as checkpointer:

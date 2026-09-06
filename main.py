@@ -8,6 +8,9 @@ from fastapi.responses import JSONResponse
 from app.models.base import init_db
 from app.schemas.common import fail
 from app.routers import chat, auth, projects, cases, executions, dashboard
+from fastapi.responses import FileResponse
+import os
+
 
 # 定义fastapi生命周期，防止一直反复编译浪费资源
 @asynccontextmanager
@@ -49,14 +52,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-from fastapi.responses import FileResponse
-import os
-
-# 负责前端启动不是在直接打开html，可以直接访问127.0.0.1:8000
 @app.get("/")
 async def index():
-    return FileResponse(os.path.join(os.path.dirname(__file__), "static/index.html"))
+    return FileResponse(
+        os.path.join(os.path.dirname(__file__), "static/index.html"),
+        headers={"Cache-Control": "no-cache"}
+    )
+
+
 
 
 # 4. 运行服务的入口（unicorn.run，启动服务）

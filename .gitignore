@@ -1,9 +1,10 @@
-# 测试截图、本地文档
 tests/test_docs/test_record/
-# 缓存文件
 __pycache__/
 *.pyc
-# 数据库
 *.db
-# 环境变量
+checkpoints.db*
 .env
+models/
+chroma_db/
+.workbuddy/
+*.bak

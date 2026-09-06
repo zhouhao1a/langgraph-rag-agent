@@ -3,6 +3,7 @@ from sqlalchemy import select, func
 from app.core.deps import get_current_user
 from app.core.rate_limit import rate_limit_generate
 from app.models.base import SessionLocal
+from app.models.execution import ExecutionRecord
 from app.models.user import User
 from app.models.project import Project
 from app.models.test_case import TestCase
@@ -51,7 +52,16 @@ async def create_case(req: CaseCreate, user: User = Depends(get_current_user)):
 async def list_cases(page: int = 1, page_size: int = 10, project_id: int = None,
                      user: User = Depends(get_current_user)):
     async with SessionLocal() as session:
-        q = select(TestCase).where(TestCase.created_by == user.id)
+        # 每一行用例，关联 execution_record 里该用例「最近一次」的 status
+        latest_exec = (
+            select(ExecutionRecord.status)
+            .where(ExecutionRecord.case_id == TestCase.id)
+            .where(ExecutionRecord.executed_by == user.id)
+            .order_by(ExecutionRecord.id.desc())
+            .limit(1)
+            .scalar_subquery()
+        )
+        q = select(TestCase, latest_exec.label("exec_status")).where(TestCase.created_by == user.id)
         if project_id:
             q = q.where(TestCase.project_id == project_id)
         total = (await session.execute(
@@ -59,9 +69,13 @@ async def list_cases(page: int = 1, page_size: int = 10, project_id: int = None,
         )).scalar()
         rows = (await session.execute(
             q.order_by(TestCase.id.desc()).offset((page - 1) * page_size).limit(page_size)
-        )).scalars().all()
-    return ok({"items": [to_dict(c) for c in rows], "total": total,
-               "page": page, "page_size": page_size})
+        )).all()   # 注意：不能再用 .scalars()，因为查的是两列（用例对象 + 状态）
+    items = []
+    for c, es in rows:          # c 是 TestCase，es 是最新执行状态（没执行过就是 None）
+        d = to_dict(c)
+        d["exec_status"] = es
+        items.append(d)
+    return ok({"items": items, "total": total, "page": page, "page_size": page_size})
 
 
 @router.get("/{case_id}")

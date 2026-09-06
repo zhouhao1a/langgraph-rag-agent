@@ -33,3 +33,4 @@ pytest==9.1.1
 pytest-asyncio==1.4.0
 cryptography==50.0.1
 redis>=5.0.0
+lark-channel-sdk==1.4.0

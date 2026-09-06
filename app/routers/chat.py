@@ -29,7 +29,7 @@ async def chat(req: ChatRequest, request: Request, user:User=Depends(rate_limit_
 
 # 定义一个函数（生成器），循环拿agent吐出的一小块一小块chunk数据
     async def stream_generator():
-       async for chunk in run_agent(req.query,req.thread_id,graph=request.app.state.graph):
+       async for chunk in run_agent(req.query,req.thread_id,graph=request.app.state.graph,user_id=user.id):
 # 把拿到的小块数据包装成SSE规定格式往前端发
             yield f"data: {chunk.content}\n\n"
 # SSE流式响应，实现打字输出效果
@@ -43,7 +43,7 @@ async def chat(req: ChatRequest, request: Request, user:User=Depends(rate_limit_
 @router.post("/chat/once")
 async def chat_once(req: ChatRequest, request: Request, user:User=Depends(rate_limit_chat)):
         full_answer = ""
-        async for chunk in run_agent(req.query, req.thread_id,graph=request.app.state.graph):
+        async for chunk in run_agent(req.query, req.thread_id,graph=request.app.state.graph,user_id=user.id):
                 full_answer += chunk.content
         async with SessionLocal() as session:
             session.add(ChatHistory(thread_id=req.thread_id,role="user",content=req.query,user_id=user.id))
